@@ -1,41 +1,84 @@
+const jwt = require("jsonwebtoken");
+const bcrypt = require("bcryptjs");
 const asyncHandler = require("express-async-handler");
-
-// @desc    Get user
-// @route   GET /api/user
-// @access  Private
-const getUser = asyncHandler(async (req, res) => {
- res.status(200).json({ message: "Get the user" });
-});
+const { UserLogin, UserReset, User } = require("../models/userModel");
 
 // @desc    Set user
 // @route   POST /api/user
 // @access  Private
 const setUser = asyncHandler(async (req, res) => {
- if (!req.body.text) {
+ let { first_name, last_name, email, password } = req.body;
+
+ if (!first_name || !last_name || !email || !password) {
   res.status(400);
-  throw new Error("No Text");
+  throw new Error("Please fill all fields");
  }
 
- res.status(200).json({ message: "Set the user" });
+ const date = () => {
+  let d = new Date();
+  return `${d.getDate()}-${d.getMonth()}-${d.getFullYear()} ${d.getHours()}:${d.getMinutes()}`;
+ };
+
+ // Check if user exist
+ const userExists = await User.findOne({ email });
+
+ if (userExists) {
+  res.status(400);
+  throw new Error("User already exists");
+ }
+
+ // Hash password
+ const salt = await bcrypt.genSalt(10);
+ const hashedPassword = await bcrypt.hash(password, salt);
+
+ // Create user
+ const user = await User.create({
+  first_name,
+  last_name,
+  email,
+  password: hashedPassword,
+  last_login: date(),
+  register_date: date(),
+ });
+
+ if (user) {
+  res.status(201).json({
+   _id: user.id,
+   name: user.first_name,
+   email: user.email,
+  });
+ } else {
+  res.status(400);
+  throw new Error("Incalid user data");
+ }
 });
 
-// @desc    Update user
-// @route   PUT /api/user/:id
+// @desc    Login user
+// @route   POST /api/auth/login
 // @access  Private
-const updateUser = asyncHandler(async (req, res) => {
- res.status(200).json({ message: `Update the user, id: ${req.params.id}` });
-});
+const login = asyncHandler(async (req, res) => {
+ const { email, password } = req.body;
+ const date = () => {
+  let d = new Date();
+  return `${d.getDate()}-${d.getMonth()}-${d.getFullYear()} ${d.getHours()}:${d.getMinutes()}`;
+ };
+ // Check for user email
+ const user = await User.findOne({ email });
 
-// @desc    Delete userd
-// @route   DELETE /api/user/:id
-// @access  Private
-const deleteUser = asyncHandler(async (req, res) => {
- res.status(200).json({ message: `Delete the user, id: ${req.params.id}` });
+ if (user && (await bcrypt.compare(password, user.password))) {
+  await User.findOneAndUpdate({ email }, { last_login: date() });
+  res.json({
+   _id: user.id,
+   name: user.first_name,
+   email: user.email,
+  });
+ } else {
+  res.status(400);
+  throw new Error("Incalid credentionals");
+ }
 });
 
 module.exports = {
- getUser,
+ login,
  setUser,
- updateUser,
- deleteUser,
 };
