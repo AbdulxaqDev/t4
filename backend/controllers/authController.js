@@ -1,7 +1,7 @@
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const asyncHandler = require("express-async-handler");
-const { UserLogin, UserReset, User } = require("../models/userModel");
+const { User } = require("../models/userModel");
 
 // @desc    Set user
 // @route   POST /api/user
@@ -44,8 +44,9 @@ const setUser = asyncHandler(async (req, res) => {
  if (user) {
   res.status(201).json({
    _id: user.id,
-   name: user.first_name,
+   name: `${user.first_name} ${user.last_name}`,
    email: user.email,
+   token: generateToken(user._id),
   });
  } else {
   res.status(400);
@@ -66,17 +67,27 @@ const login = asyncHandler(async (req, res) => {
  const user = await User.findOne({ email });
 
  if (user && (await bcrypt.compare(password, user.password))) {
+  if (!user.status) {
+   res.status(403);
+   throw new Error("You are blocked");
+  }
   await User.findOneAndUpdate({ email }, { last_login: date() });
   res.json({
    _id: user.id,
    name: user.first_name,
    email: user.email,
+   token: generateToken(user._id),
   });
  } else {
   res.status(400);
-  throw new Error("Incalid credentionals");
+  throw new Error("Invalid credentionals");
  }
 });
+
+// Generate Toekn
+const generateToken = (id) => {
+ return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: "1d" });
+};
 
 module.exports = {
  login,
