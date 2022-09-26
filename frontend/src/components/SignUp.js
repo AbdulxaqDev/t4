@@ -21,7 +21,7 @@ function SignUp() {
   if (isLogged) {
    navigate('/dashboard-layout')
   }
- })
+ }, [])
 
  const [formData, setFormData] = React.useState({
   first_name: "",

@@ -23,7 +23,7 @@ const getUser = asyncHandler(async (req, res) => {
 // @access  Private
 const updateUser = asyncHandler(async (req, res) => {
  let { IDs, status } = req.body;
- let ids = IDs
+ let ids = IDs;
  const updateUsers = await User.updateMany(
   { _id: { $in: ids } },
   { $set: { status } },
@@ -42,16 +42,15 @@ const updateUser = asyncHandler(async (req, res) => {
 // @route   DELETE /api/user/:id
 // @access  Private
 const deleteUser = asyncHandler(async (req, res) => {
- const user = await User.findById(req.params.id);
-
- if (!user) {
-  res.status(400);
-  throw new Error("User not found");
+ let { IDs } = req.body;
+ const deleteUser = await User.deleteMany({ _id: { $in: IDs } });
+ console.log(req.body);
+ if (deleteUser) {
+  res.status(201).json(deleteUser);
+ } else {
+  res.status(500);
+  throw new Error("Error on updating users status");
  }
-
- const deleteUser = await User.findByIdAndDelete(req.params.id);
-
- res.status(200).json(deleteUser);
 });
 
 module.exports = {
@@ -60,4 +59,3 @@ module.exports = {
  getUsers,
  getUser,
 };
- 

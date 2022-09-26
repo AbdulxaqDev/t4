@@ -10,7 +10,8 @@ const initialState = {
  isSuccess: false,
  isLoading: false,
  message: "",
- updateStatus: ""
+ updateStatus: "",
+ isActive: {status: true}
 };
 
 // Get users user
@@ -39,9 +40,30 @@ export const updateUsers = createAsyncThunk("user/updateUsers", async (updateUse
  }
 });
 
-// export const logout = createAsyncThunk("auth/logout", async () => {
-//  await authService.logout();
-// });
+// Login user
+export const deleteUsers = createAsyncThunk("user/deleteUsers", async (userIds,  thunkAPI) => {
+ try {
+  return await userService.deleteUsers(userIds);
+ } catch (error) {
+  const message =
+   (error.response && error.response.data && error.response.data.message) ||
+   error.message ||
+   error.toString();
+  return thunkAPI.rejectWithValue(message);
+ }
+});
+
+export const getMe = createAsyncThunk("user/getMe", async (thunkAPI) => {
+ try {
+  return await userService.getMe();
+ } catch (error) {
+  const message =
+   (error.response && error.response.data && error.response.data.message) ||
+   error.message ||
+   error.toString();
+  return thunkAPI.rejectWithValue(message);
+ }
+});
 
 export const userSlice = createSlice({
  name: "user",
@@ -69,7 +91,7 @@ export const userSlice = createSlice({
     state.isError = true;
     state.message = action.payload;
     state.users = null;
-   })
+   }) // updateUser
    .addCase(updateUsers.pending, (state) => {
     state.isLoading = true;
    })
@@ -83,7 +105,33 @@ export const userSlice = createSlice({
     state.isError = true;
     state.message = action.payload;
     state.updateStatus = null;
-   });
+   }) // getMe
+   .addCase(getMe.pending, (state) => {
+    state.isLoading = true;
+   })
+   .addCase(getMe.fulfilled, (state, action) => {
+    state.isLoading = false;
+    state.isSuccess = true;
+    state.isActive = action.payload;
+   })
+   .addCase(getMe.rejected, (state, action) => {
+    state.isLoading = false;
+    state.isError = true;
+    state.message = action.payload;
+    state.isActive = {status: true};
+   })
+   .addCase(deleteUsers.pending, (state) => {
+    state.isLoading = true;
+   })
+   .addCase(deleteUsers.fulfilled, (state) => {
+    state.isLoading = false;
+    state.isSuccess = true;
+   })
+   .addCase(deleteUsers.rejected, (state, action) => {
+    state.isLoading = false;
+    state.isError = true;
+    state.message = action.payload;
+   })
  },
 });
 

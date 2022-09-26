@@ -30,7 +30,7 @@ function SignIn() {
   if (isLogged) {
    navigate('/dashboard-layout')
   }
- })
+ }, [])
 
  React.useEffect(() => {
   if (isError) {

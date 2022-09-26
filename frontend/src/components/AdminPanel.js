@@ -8,9 +8,10 @@ import Table from "react-bootstrap/Table";
 import { useSelector, useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
-import { getUsers, reset, updateUsers } from "./features/user/userSlice";
+import { getUsers, reset, updateUsers, getMe, deleteUsers} from "./features/user/userSlice";
 import userService from "./features/user/userService";
 import Spinner from "./Spinner";
+import authService from "./features/auth/authService";
 
 function AdminPanel() {
  const renderTooltip = (props) => (
@@ -24,21 +25,28 @@ function AdminPanel() {
  const [checked, setChecked] = React.useState([]);
  const [allCheck, setAllCheck] = React.useState("");
 
- const { users, isLoading, isError, isSuccess, message, updateUsersStatus } =
-  useSelector((state) => state.user);
+ const {
+  users,
+  isLoading,
+  isError,
+  isSuccess,
+  message,
+  updateUsersStatus,
+  isActive,
+ } = useSelector((state) => state.user);
 
  const areAllChecked = (e) => {
   if (e.target.checked === true) {
    setChecked(
     users.map((user) => {
-     document.getElementById(user._id).checked = true;
+     document.getElementById(`check-${user._id}`).checked = true;
      return user._id;
     })
    );
   }
   if (e.target.checked === false) {
    users.map((user) => {
-    document.getElementById(user._id).checked = false;
+    document.getElementById(`check-${user._id}`).checked = false;
    });
    setChecked([]);
   }
@@ -54,7 +62,7 @@ function AdminPanel() {
   }
   if (
    users
-    .map((user) => document.getElementById(user._id).checked)
+    .map((user) => document.getElementById(`check-${user._id}`).checked)
     .every((check) => check === true)
   ) {
    document.getElementById("checkAll").checked = true;
@@ -68,12 +76,14 @@ function AdminPanel() {
    toast.error(message);
   }
 
-  if (isSuccess && users) {
+  if (isSuccess) {
    setUsers(users);
   }
+
   if (updateUsersStatus) {
    console.log(updateUsersStatus);
   }
+
   dispatch(reset());
  }, [
   users,
@@ -84,25 +94,24 @@ function AdminPanel() {
   dispatch,
   updateUsersStatus,
   userS,
+  localStorage.getItem("user"),
  ]);
 
  React.useEffect(() => {
-  dispatch(getUsers());
+  if (isActive.status !== undefined) {
+   if (!isActive.status) {
+    authService.logout();
+    navigate("/");
+   }
+  }
+ }, [isActive]);
 
+
+ React.useEffect(() => {
+  dispatch(getUsers());
  }, []);
 
-
-
-
-
- const updateUserS = (IDs, status) => {
-  let isActive = userService.getMe().status;
-
-  if (!isActive) {
-   localStorage.removeItem('user')
-   navigate("/");
-  }
-
+ const updateUserS = async (IDs, status) => {
   if (IDs.length === 0) {
    status
     ? toast.error("Check any user to Unblock")
@@ -110,13 +119,24 @@ function AdminPanel() {
   } else {
    dispatch(updateUsers({ IDs, status }));
    dispatch(getUsers());
+   dispatch(getMe());
+   setChecked([])
+  }
+ };
+
+ const deleteUserS = async (IDs) => {
+  if (IDs.length === 0) {
+   toast.error("Check any user to Delete");
+  } else {
+   dispatch(deleteUsers({ IDs }));
+   dispatch(getUsers());
+   dispatch(getMe());
   }
  };
 
  if (isLoading) {
   return <Spinner />;
  }
-
 
  return (
   <div style={{ width: "90vw", marginTop: "100px" }} className="mx-auto">
@@ -160,6 +180,7 @@ function AdminPanel() {
      <Button
       className="d-flex justify-content-center align-items-center mx-2"
       variant="secondary"
+      onClick={() => { deleteUserS(checked)}}
      >
       <DeleteIcon />
      </Button>
@@ -185,7 +206,7 @@ function AdminPanel() {
        <td className="d-flex justify-content-center">
         {" "}
         <Form.Check
-         id={user._id}
+         id={`check-${user._id}`}
          onChange={(e) => {
           checkCheked(e, user._id);
          }}
